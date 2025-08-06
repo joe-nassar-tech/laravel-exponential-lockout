@@ -99,7 +99,7 @@ class LockoutManager
         $cacheKey = $this->buildCacheKey($context, $key);
         $lockoutData = $this->getCacheStore()->get($cacheKey);
 
-        if (!$lockoutData || !isset($lockoutData['locked_until'])) {
+        if (!$lockoutData || !isset($lockoutData['locked_until']) || $lockoutData['locked_until'] === null) {
             return false;
         }
 
@@ -123,19 +123,26 @@ class LockoutManager
      */
     public function getRemainingTime(string $context, string $key): int
     {
-        if (!$this->isLockedOut($context, $key)) {
-            return 0;
-        }
-
+        $this->validateContext($context);
+        
         $cacheKey = $this->buildCacheKey($context, $key);
         $lockoutData = $this->getCacheStore()->get($cacheKey);
         
-        if (!$lockoutData || !isset($lockoutData['locked_until'])) {
+        if (!$lockoutData || !isset($lockoutData['locked_until']) || $lockoutData['locked_until'] === null) {
             return 0;
         }
 
         $lockedUntil = Carbon::createFromTimestamp($lockoutData['locked_until']);
-        return max(0, $lockedUntil->diffInSeconds(Carbon::now()));
+        $now = Carbon::now();
+        
+        // If lockout has expired, return 0
+        if ($lockedUntil->isPast()) {
+            return 0;
+        }
+        
+        // Calculate remaining seconds - use ceiling to ensure we don't return 0 when there's still time left
+        $remaining = $lockedUntil->diffInSeconds($now, false);
+        return max(1, (int) ceil($remaining)); // Always return at least 1 second if locked
     }
 
     /**
