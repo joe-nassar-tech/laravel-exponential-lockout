@@ -70,6 +70,20 @@ return [
     | Define specific configurations for different contexts. Each context
     | can have its own delay sequence, response mode, and key extraction logic.
     |
+    | Available Options:
+    | - enabled: Whether lockout is active for this context
+    | - key: Field to track users by ('email', 'phone', 'ip', etc.)
+    | - delays: Custom delay sequence (null uses default_delays)
+    | - min_attempts: Minimum failed attempts before lockout starts (default: 3)
+    | - max_attempts: Maximum attempts allowed (null = unlimited)
+    | - response_mode: 'auto', 'json', 'redirect', or 'callback'
+    | - redirect_route: Route to redirect to when locked out
+    |
+    | Examples:
+    | min_attempts => 1: Lock immediately after 1st failure
+    | min_attempts => 3: Allow 2 free attempts, lock on 3rd failure
+    | min_attempts => 5: Allow 4 free attempts, lock on 5th failure
+    |
     */
     'contexts' => [
         'login' => [
@@ -79,6 +93,7 @@ return [
             'response_mode' => null, // null uses default_response_mode
             'redirect_route' => null, // null uses default_redirect_route
             'max_attempts' => null, // null means unlimited (uses delay sequence length)
+            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
         ],
 
         'otp' => [
@@ -88,6 +103,7 @@ return [
             'response_mode' => 'json',
             'redirect_route' => null,
             'max_attempts' => null,
+            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
         ],
 
         'pin' => [
@@ -97,6 +113,7 @@ return [
             'response_mode' => null,
             'redirect_route' => null,
             'max_attempts' => null,
+            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
         ],
 
         'admin' => [
@@ -106,6 +123,7 @@ return [
             'response_mode' => null,
             'redirect_route' => 'admin.login',
             'max_attempts' => null,
+            'min_attempts' => 2, // Lock after 2 failed attempts (stricter for admin)
         ],
     ],
 

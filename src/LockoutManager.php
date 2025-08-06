@@ -59,16 +59,27 @@ class LockoutManager
         $lockoutData['attempts']++;
         $lockoutData['last_attempt'] = Carbon::now()->timestamp;
 
-        // Calculate lockout duration
-        $delays = $this->getDelaysForContext($context);
-        $delayIndex = min($lockoutData['attempts'] - 1, count($delays) - 1);
-        $lockoutDuration = $delays[$delayIndex] ?? end($delays);
+        // Get the minimum attempts before lockout (default: 3)
+        $contextConfig = $this->getContextConfig($context);
+        $minAttempts = $contextConfig['min_attempts'] ?? 3;
 
-        // Set lockout expiration
-        $lockoutData['locked_until'] = Carbon::now()->addSeconds($lockoutDuration)->timestamp;
+        // Only apply lockout if we've reached the minimum attempt threshold
+        if ($lockoutData['attempts'] >= $minAttempts) {
+            // Calculate lockout duration based on attempts beyond the threshold
+            $delays = $this->getDelaysForContext($context);
+            $lockoutAttemptIndex = $lockoutData['attempts'] - $minAttempts;
+            $delayIndex = min($lockoutAttemptIndex, count($delays) - 1);
+            $lockoutDuration = $delays[$delayIndex] ?? end($delays);
+
+            // Set lockout expiration
+            $lockoutData['locked_until'] = Carbon::now()->addSeconds($lockoutDuration)->timestamp;
+        } else {
+            // Not enough attempts yet - no lockout
+            $lockoutData['locked_until'] = null;
+        }
 
         // Store the updated data with appropriate TTL
-        $ttl = $lockoutDuration + 3600; // Add 1 hour buffer
+        $ttl = isset($lockoutDuration) ? $lockoutDuration + 3600 : 3600; // Add 1 hour buffer
         $store->put($cacheKey, $lockoutData, $ttl);
 
         return $lockoutData['attempts'];
