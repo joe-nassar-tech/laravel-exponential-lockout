@@ -94,6 +94,7 @@ return [
             'redirect_route' => null, // null uses default_redirect_route
             'max_attempts' => null, // null means unlimited (uses delay sequence length)
             'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
+            'reset_after_hours' => 24, // Reset attempt count after 24 hours of inactivity
         ],
 
         'otp' => [

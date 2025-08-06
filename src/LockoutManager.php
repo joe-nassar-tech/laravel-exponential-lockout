@@ -55,12 +55,23 @@ class LockoutManager
             'last_attempt' => null,
         ]);
 
+        // Check if we should reset attempts due to time passed (optional feature)
+        $contextConfig = $this->getContextConfig($context);
+        $resetAfterHours = $contextConfig['reset_after_hours'] ?? 24; // Default: reset after 24 hours
+        
+        if (isset($lockoutData['last_attempt'])) {
+            $lastAttempt = Carbon::createFromTimestamp($lockoutData['last_attempt']);
+            if ($lastAttempt->diffInHours(Carbon::now()) >= $resetAfterHours) {
+                // Reset attempts if too much time has passed
+                $lockoutData['attempts'] = 0;
+            }
+        }
+
         // Increment attempt count
         $lockoutData['attempts']++;
         $lockoutData['last_attempt'] = Carbon::now()->timestamp;
 
         // Get the minimum attempts before lockout (default: 3)
-        $contextConfig = $this->getContextConfig($context);
         $minAttempts = $contextConfig['min_attempts'] ?? 3;
 
         // Only apply lockout if we've reached the minimum attempt threshold
@@ -105,9 +116,11 @@ class LockoutManager
 
         $lockedUntil = Carbon::createFromTimestamp($lockoutData['locked_until']);
         
-        // If lockout has expired, clean up the cache entry
+        // If lockout has expired, clear the lockout but keep attempt history
         if ($lockedUntil->isPast()) {
-            $this->getCacheStore()->forget($cacheKey);
+            // Clear the lockout timestamp but preserve attempts count
+            $lockoutData['locked_until'] = null;
+            $this->getCacheStore()->put($cacheKey, $lockoutData, 3600); // Keep attempt history for 1 hour
             return false;
         }
 
@@ -140,9 +153,15 @@ class LockoutManager
             return 0;
         }
         
-        // Calculate remaining seconds - use ceiling to ensure we don't return 0 when there's still time left
+        // Calculate remaining seconds
         $remaining = $lockedUntil->diffInSeconds($now, false);
-        return max(1, (int) ceil($remaining)); // Always return at least 1 second if locked
+        
+        // If the difference is negative (future time), return the absolute value
+        if ($remaining < 0) {
+            $remaining = abs($remaining);
+        }
+        
+        return max(1, (int) $remaining); // Always return at least 1 second if locked
     }
 
     /**
