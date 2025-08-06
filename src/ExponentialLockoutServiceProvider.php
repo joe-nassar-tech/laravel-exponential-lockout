@@ -95,16 +95,19 @@ class ExponentialLockoutServiceProvider extends ServiceProvider
 
     /**
      * Register Blade directives
+     * 
+     * Provides helpful Blade directives for checking lockout status in templates
      */
     protected function registerBladeDirectives(): void
     {
         // @lockout directive to check if a user is locked out
+        // Usage: @lockout('login', $user->email)
         \Blade::directive('lockout', function ($expression) {
-            $parts = explode(',', $expression, 2);
-            $context = trim($parts[0], " '\"");
-            $key = isset($parts[1]) ? trim($parts[1], " '\"") : 'null';
+            $parts = $this->parseBladeExpression($expression, 2);
+            $context = $parts[0];
+            $key = $parts[1] ?? 'null';
             
-            return "<?php if (app('exponential-lockout')->isLockedOut('{$context}', {$key})): ?>";
+            return "<?php if (app('exponential-lockout')->isLockedOut({$context}, {$key})): ?>";
         });
 
         \Blade::directive('endlockout', function () {
@@ -112,12 +115,13 @@ class ExponentialLockoutServiceProvider extends ServiceProvider
         });
 
         // @notlockout directive (opposite of @lockout)
+        // Usage: @notlockout('login', $user->email)
         \Blade::directive('notlockout', function ($expression) {
-            $parts = explode(',', $expression, 2);
-            $context = trim($parts[0], " '\"");
-            $key = isset($parts[1]) ? trim($parts[1], " '\"") : 'null';
+            $parts = $this->parseBladeExpression($expression, 2);
+            $context = $parts[0];
+            $key = $parts[1] ?? 'null';
             
-            return "<?php if (!app('exponential-lockout')->isLockedOut('{$context}', {$key})): ?>";
+            return "<?php if (!app('exponential-lockout')->isLockedOut({$context}, {$key})): ?>";
         });
 
         \Blade::directive('endnotlockout', function () {
@@ -125,24 +129,79 @@ class ExponentialLockoutServiceProvider extends ServiceProvider
         });
 
         // @lockoutinfo directive to get lockout information
+        // Usage: @lockoutinfo($info, 'login', $user->email)
         \Blade::directive('lockoutinfo', function ($expression) {
-            $parts = explode(',', $expression, 3);
-            $variable = trim($parts[0], " '\"$");
-            $context = trim($parts[1], " '\"");
-            $key = isset($parts[2]) ? trim($parts[2], " '\"") : 'null';
+            $parts = $this->parseBladeExpression($expression, 3);
+            $variable = trim($parts[0], '$');
+            $context = $parts[1] ?? "'unknown'";
+            $key = $parts[2] ?? 'null';
             
-            return "<?php \${$variable} = app('exponential-lockout')->getLockoutInfo('{$context}', {$key}); ?>";
+            return "<?php \${$variable} = app('exponential-lockout')->getLockoutInfo({$context}, {$key}); ?>";
         });
 
         // @lockouttime directive to get remaining time
+        // Usage: @lockouttime($time, 'login', $user->email)
         \Blade::directive('lockouttime', function ($expression) {
-            $parts = explode(',', $expression, 3);
-            $variable = trim($parts[0], " '\"$");
-            $context = trim($parts[1], " '\"");
-            $key = isset($parts[2]) ? trim($parts[2], " '\"") : 'null';
+            $parts = $this->parseBladeExpression($expression, 3);
+            $variable = trim($parts[0], '$');
+            $context = $parts[1] ?? "'unknown'";
+            $key = $parts[2] ?? 'null';
             
-            return "<?php \${$variable} = app('exponential-lockout')->getRemainingTime('{$context}', {$key}); ?>";
+            return "<?php \${$variable} = app('exponential-lockout')->getRemainingTime({$context}, {$key}); ?>";
         });
+    }
+
+    /**
+     * Parse Blade directive expression into components
+     * 
+     * @param string $expression The blade expression
+     * @param int $expectedParts Expected number of parts
+     * @return array Parsed expression parts
+     */
+    protected function parseBladeExpression(string $expression, int $expectedParts): array
+    {
+        // Remove outer parentheses if present
+        $expression = trim($expression, '()');
+        
+        // Split by comma but respect quoted strings and nested parentheses
+        $parts = [];
+        $current = '';
+        $depth = 0;
+        $inQuotes = false;
+        $quoteChar = '';
+        
+        for ($i = 0; $i < strlen($expression); $i++) {
+            $char = $expression[$i];
+            
+            if (!$inQuotes && ($char === '"' || $char === "'")) {
+                $inQuotes = true;
+                $quoteChar = $char;
+            } elseif ($inQuotes && $char === $quoteChar) {
+                $inQuotes = false;
+                $quoteChar = '';
+            } elseif (!$inQuotes && $char === '(') {
+                $depth++;
+            } elseif (!$inQuotes && $char === ')') {
+                $depth--;
+            } elseif (!$inQuotes && $char === ',' && $depth === 0) {
+                $parts[] = trim($current);
+                $current = '';
+                continue;
+            }
+            
+            $current .= $char;
+        }
+        
+        if ($current !== '') {
+            $parts[] = trim($current);
+        }
+        
+        // Pad with null values if we don't have enough parts
+        while (count($parts) < $expectedParts) {
+            $parts[] = 'null';
+        }
+        
+        return $parts;
     }
 
     /**
