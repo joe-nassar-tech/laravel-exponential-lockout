@@ -53,6 +53,7 @@ class LockoutManager
             'attempts' => 0,
             'locked_until' => null,
             'last_attempt' => null,
+            'grace_attempt_used' => false,
         ]);
 
         // Check if we should reset attempts due to time passed (optional feature)
@@ -67,9 +68,19 @@ class LockoutManager
             }
         }
 
-        // Increment attempt count
-        $lockoutData['attempts']++;
-        $lockoutData['last_attempt'] = Carbon::now()->timestamp;
+        // Check if user is in a "grace period" after lockout expired
+        $isGracePeriod = isset($lockoutData['locked_until']) && $lockoutData['locked_until'] === null && $lockoutData['attempts'] >= ($contextConfig['min_attempts'] ?? 3);
+        
+        if ($isGracePeriod && !($lockoutData['grace_attempt_used'] ?? false)) {
+            // User is using their 1 grace attempt after lockout expired
+            $lockoutData['grace_attempt_used'] = true;
+            $lockoutData['last_attempt'] = Carbon::now()->timestamp;
+            // Don't increment attempts - this is the grace attempt
+        } else {
+            // Normal attempt increment
+            $lockoutData['attempts']++;
+            $lockoutData['last_attempt'] = Carbon::now()->timestamp;
+        }
 
         // Get the minimum attempts before lockout (default: 3)
         $minAttempts = $contextConfig['min_attempts'] ?? 3;
@@ -84,9 +95,13 @@ class LockoutManager
 
             // Set lockout expiration
             $lockoutData['locked_until'] = Carbon::now()->addSeconds($lockoutDuration)->timestamp;
+            
+            // Mark that user gets 1 free attempt after this lockout expires
+            $lockoutData['grace_attempt_used'] = false;
         } else {
             // Not enough attempts yet - no lockout
             $lockoutData['locked_until'] = null;
+            $lockoutData['grace_attempt_used'] = false;
         }
 
         // Store the updated data with appropriate TTL
@@ -120,6 +135,8 @@ class LockoutManager
         if ($lockedUntil->isPast()) {
             // Clear the lockout timestamp but preserve attempts count
             $lockoutData['locked_until'] = null;
+            // Reset grace attempt when lockout expires - user gets 1 free attempt
+            $lockoutData['grace_attempt_used'] = false;
             $this->getCacheStore()->put($cacheKey, $lockoutData, 3600); // Keep attempt history for 1 hour
             return false;
         }
