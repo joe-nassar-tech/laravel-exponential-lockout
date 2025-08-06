@@ -1,5 +1,5 @@
 {
-    "name": "joenassar/laravel-exponential-lockout",
+    "name": "joe-nassar-tech/laravel-exponential-lockout",
     "description": "Laravel package for implementing exponential lockout on failed authentication attempts with configurable contexts",
     "type": "library",
     "license": "MIT",
@@ -14,11 +14,11 @@
         "middleware",
         "cache"
     ],
-    "homepage": "https://github.com/joenassar/laravel-exponential-lockout",
+    "homepage": "https://github.com/joe-nassar-tech/laravel-exponential-lockout",
     "support": {
-        "issues": "https://github.com/joenassar/laravel-exponential-lockout/issues",
-        "source": "https://github.com/joenassar/laravel-exponential-lockout",
-        "docs": "https://github.com/joenassar/laravel-exponential-lockout/tree/main/docs"
+        "issues": "https://github.com/joe-nassar-tech/laravel-exponential-lockout/issues",
+        "source": "https://github.com/joe-nassar-tech/laravel-exponential-lockout",
+        "docs": "https://github.com/joe-nassar-tech/laravel-exponential-lockout/tree/main/docs"
     },
     "authors": [
         {
