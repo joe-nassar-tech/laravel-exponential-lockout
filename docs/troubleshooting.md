@@ -136,13 +136,13 @@ Command "lockout:clear" is not defined.
 #### 1. Check Package Installation
 
 ```bash
-composer show vendor/laravel-exponential-lockout
+composer show joe-nassar-tech/laravel-exponential-lockout
 ```
 
 **Expected:** Should show package information
 **If error:** Package not installed, run:
 ```bash
-composer require vendor/laravel-exponential-lockout
+composer require joe-nassar-tech/laravel-exponential-lockout
 ```
 
 #### 2. Check Service Provider Registration
@@ -541,7 +541,7 @@ php artisan lockout:clear admin --all --force
 **Solutions:**
 1. `composer dump-autoload`
 2. Check package is in `composer.json`
-3. Reinstall: `composer require vendor/laravel-exponential-lockout`
+3. Reinstall: `composer require joe-nassar-tech/laravel-exponential-lockout`
 
 ### "Call to undefined method isLockedOut()"
 
@@ -567,7 +567,7 @@ php artisan vendor:publish --tag=exponential-lockout-config --force
 
 When something isn't working, check these in order:
 
-- [ ] Package installed correctly (`composer show vendor/laravel-exponential-lockout`)
+- [ ] Package installed correctly (`composer show joe-nassar-tech/laravel-exponential-lockout`)
 - [ ] Configuration published (`config/exponential-lockout.php` exists)
 - [ ] Context is configured and enabled
 - [ ] Middleware applied to correct routes

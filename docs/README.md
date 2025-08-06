@@ -21,7 +21,6 @@ Welcome to the complete documentation for Laravel Exponential Lockout! This docu
 ### For Developers
 - **[Learning Roadmap](learning-roadmap.md)** - How to learn Laravel and understand this package
 - **[Developer Guide](developer-guide.md)** - Internal architecture and code explanation
-- **[Publishing Guide](publishing-guide.md)** - How to publish Laravel packages
 
 ## 🎯 What This Package Does
 

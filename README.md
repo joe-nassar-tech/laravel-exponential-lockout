@@ -4,23 +4,27 @@ A comprehensive Laravel package for implementing exponential lockout functionali
 
 ## Features
 
-- ✅ **Exponential Delay Sequence**: Configurable delay progression (default: 1min → 5min → 15min → 30min → 2hr → 6hr → 12hr → 24hr)
-- ✅ **Multiple Contexts**: Support for different lockout contexts (`login`, `otp`, `pin`, etc.)
-- ✅ **Flexible Key Extraction**: Track by email, phone, user ID, IP, or custom logic
-- ✅ **Middleware Support**: Easy route protection with `exponential.lockout:{context}`
-- ✅ **Manual API Control**: Programmatic lockout management
-- ✅ **Smart Response Handling**: Auto-detect JSON/redirect responses
-- ✅ **Cache-Based Storage**: Uses Laravel's cache system (Redis, File, etc.)
-- ✅ **Artisan Commands**: CLI tools for lockout management
-- ✅ **Blade Directives**: Template helpers for lockout status
-- ✅ **Laravel 9+ Compatible**: Full support for modern Laravel versions
+- 🎯 **Perfect Exponential Lockout**: Grace attempts system - exactly 1 attempt allowed after each lockout period
+- ✅ **100% Automatic Middleware**: Zero code changes needed - just add middleware to routes
+- ✅ **Smart Delay Progression**: Configurable delays (default: 1min → 5min → 15min → 30min → 2hr → 6hr → 12hr → 24hr)
+- ✅ **Configurable Free Attempts**: Set how many attempts before first lockout (default: 3)
+- ✅ **Multiple Contexts**: Different rules for `login`, `otp`, `admin`, `pin`, etc.
+- ✅ **Flexible Key Extraction**: Track by email, phone, username, IP, or custom logic
+- ✅ **Auto-Detection**: Automatically detects 4xx/5xx failures and 2xx success
+- ✅ **Manual API Control**: Full programmatic control when needed
+- ✅ **Smart Response Handling**: Auto-detect JSON/redirect responses with proper headers
+- ✅ **Persistent Attempt History**: Remembers failures across lockout periods
+- ✅ **Cache-Based Storage**: Uses Laravel's cache system (Redis, File, Database, etc.)
+- ✅ **Artisan Commands**: CLI tools for lockout management and debugging
+- ✅ **Blade Directives**: Template helpers for lockout status display
+- ✅ **Laravel 9-12+ Compatible**: Full support for all modern Laravel versions
 
 ## Installation
 
 Install via Composer:
 
 ```bash
-composer require joenassar/laravel-exponential-lockout
+composer require joe-nassar-tech/laravel-exponential-lockout
 ```
 
 Publish the configuration file:
@@ -41,7 +45,7 @@ return [
         'prefix' => 'exponential_lockout',
     ],
 
-    // Default delay sequence (in seconds)
+    // Default delay sequence (in seconds) - 1min → 5min → 15min → 30min → 2hr → 6hr → 12hr → 24hr
     'default_delays' => [60, 300, 900, 1800, 7200, 21600, 43200, 86400],
 
     // Response handling
@@ -54,17 +58,43 @@ return [
             'enabled' => true,
             'key' => 'email',
             'delays' => null, // Uses default_delays
+            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
+            'reset_after_hours' => 24, // Reset attempt count after 24 hours
         ],
         'otp' => [
             'enabled' => true,
             'key' => 'phone',
             'delays' => [30, 60, 180, 300, 600], // Shorter delays for OTP
             'response_mode' => 'json',
+            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
         ],
         // ... more contexts
     ],
 ];
 ```
+
+## How It Works
+
+### 🎯 **Perfect Exponential Lockout Behavior**
+
+The package implements a **grace attempt system** that provides exactly 1 attempt after each lockout period:
+
+| Attempt | Result | Behavior |
+|---------|--------|----------|
+| 1st-3rd ❌ | ✅ **Free attempts** | No lockout (configurable with `min_attempts`) |
+| 4th ❌ | 🚫 **Block 60s** | First lockout (using default delays) |
+| *After 60s* | 🎁 **1 grace attempt** | Exactly 1 try allowed |
+| Grace ❌ | 🚫 **Block 300s** | Second lockout (5 minutes) |
+| *After 300s* | 🎁 **1 grace attempt** | Exactly 1 try allowed |
+| Grace ❌ | 🚫 **Block 900s** | Third lockout (15 minutes) |
+| **Any Success ✅** | 🔄 **Complete Reset** | Back to 3 free attempts |
+
+### 🔑 **Key Features:**
+- **Configurable free attempts** (default: 3) before first lockout
+- **Progressive delays** that increase exponentially
+- **Grace attempts** - exactly 1 attempt allowed after each lockout expires
+- **Automatic reset** on any successful authentication
+- **Persistent memory** - remembers attempt history across sessions
 
 ## Basic Usage
 
@@ -99,21 +129,23 @@ class LoginController extends Controller
 {
     public function login(Request $request)
     {
+        // Check if locked out (optional - middleware handles this automatically)
+        if (Lockout::isLockedOut('login', $request->email)) {
+            $remaining = Lockout::getRemainingTime('login', $request->email);
+            return response()->json(['error' => 'Locked', 'retry_after' => $remaining], 429);
+        }
+        
         $credentials = $request->only('email', 'password');
         
         if (Auth::attempt($credentials)) {
-            // Clear lockout on successful login
+            // Clear lockout on successful login (optional - middleware does this automatically)
             Lockout::clear('login', $request->email);
-            
-            return redirect()->intended('dashboard');
+            return response()->json(['success' => true], 200);
         }
         
-        // Record failed attempt
-        $attemptCount = Lockout::recordFailure('login', $request->email);
-        
-        return back()->withErrors([
-            'email' => 'Invalid credentials. Attempt: ' . $attemptCount
-        ]);
+        // Record failed attempt (optional - middleware does this automatically)
+        Lockout::recordFailure('login', $request->email);
+        return response()->json(['error' => 'Invalid credentials'], 401);
     }
 }
 ```

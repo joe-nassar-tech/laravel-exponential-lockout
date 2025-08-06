@@ -270,7 +270,7 @@ Command "lockout:clear" is not defined.
 
 **Solutions:**
 1. Make sure you're in your Laravel project directory
-2. Check that the package is installed: `composer show vendor/laravel-exponential-lockout`
+2. Check that the package is installed: `composer show joe-nassar-tech/laravel-exponential-lockout`
 3. Clear Laravel cache: `php artisan cache:clear`
 
 ### "Permission denied"

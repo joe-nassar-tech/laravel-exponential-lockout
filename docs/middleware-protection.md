@@ -69,11 +69,12 @@ Route::post('/login', [LoginController::class, 'login'])
 **What happens automatically:**
 - ✅ **Success (200)** → Lockout cleared automatically
 - ❌ **Failed (401/422)** → Failure recorded automatically  
-- 🚫 **1st failure** → No blocking yet
-- 🚫 **2nd failure** → Still no blocking
-- ⏱️ **3rd failure** → Locked for 1 minute
-- ⏱️ **4th failure** → Locked for 5 minutes
-- ⏱️ **5th failure** → Locked for 15 minutes
+- 🚫 **1st failure** → No blocking yet (free attempt)
+- 🚫 **2nd failure** → No blocking yet (free attempt)
+- 🚫 **3rd failure** → No blocking yet (free attempt)
+- ⏱️ **4th failure** → Locked for 1 minute
+- ⏱️ **5th failure** → Locked for 5 minutes
+- ⏱️ **6th failure** → Locked for 15 minutes
 - And so on with exponential delays...
 
 ## 🤖 **How Automatic Detection Works**

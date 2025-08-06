@@ -156,7 +156,7 @@ class Lockout extends Facade
 
 ```json
 {
-    "name": "vendor/laravel-exponential-lockout",
+    "name": "joe-nassar-tech/laravel-exponential-lockout",
     "description": "Laravel package for implementing exponential lockout",
     "require": {
         "php": "^8.0",

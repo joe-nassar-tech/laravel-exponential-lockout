@@ -21,7 +21,7 @@ You need:
 Open your terminal/command prompt in your Laravel project folder and run:
 
 ```bash
-composer require vendor/laravel-exponential-lockout
+composer require joe-nassar-tech/laravel-exponential-lockout
 ```
 
 **What this does:** Downloads and installs the security package into your website.
@@ -58,7 +58,7 @@ Route::post('/login', [LoginController::class, 'login'])
 ## ✅ Step 4: Test It's Working
 
 1. **Go to your login page**
-2. **Try logging in with wrong password 3 times**
+2. **Try logging in with wrong password 4 times**
 3. **You should see a message saying "Too many attempts"**
 4. **Wait 1 minute and try again**
 
@@ -68,11 +68,12 @@ If you see the blocking message, congratulations! 🎉 Your website is now prote
 
 When someone tries to login with wrong password:
 
-1. **First attempt:** Login fails normally
-2. **Second attempt:** Login fails, system starts watching
-3. **Third attempt:** System blocks them for 1 minute
-4. **Fourth attempt:** System blocks them for 5 minutes
-5. **And so on...** Times keep getting longer
+1. **First attempt:** Login fails normally (free attempt)
+2. **Second attempt:** Login fails normally (free attempt)
+3. **Third attempt:** Login fails normally (free attempt)
+4. **Fourth attempt:** System blocks them for 1 minute
+5. **Fifth attempt:** System blocks them for 5 minutes
+6. **And so on...** Times keep getting longer
 
 This makes it impossible for hackers to try thousands of passwords quickly.
 
@@ -82,13 +83,15 @@ This makes it impossible for hackers to try thousands of passwords quickly.
 |---------|-----------|
 | 1st     | No wait   |
 | 2nd     | No wait   |
-| 3rd     | 1 minute  |
-| 4th     | 5 minutes |
-| 5th     | 15 minutes|
-| 6th     | 30 minutes|
-| 7th     | 2 hours   |
-| 8th     | 6 hours   |
-| 9th+    | 24 hours  |
+| 3rd     | No wait   |
+| 4th     | 1 minute  |
+| 5th     | 5 minutes |
+| 6th     | 15 minutes|
+| 7th     | 30 minutes|
+| 8th     | 2 hours   |
+| 9th     | 6 hours   |
+| 10th    | 12 hours  |
+| 11th+   | 24 hours  |
 
 ## 🎛️ Basic Settings (Optional)
 

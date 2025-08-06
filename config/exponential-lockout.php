@@ -105,6 +105,7 @@ return [
             'redirect_route' => null,
             'max_attempts' => null,
             'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
+            'reset_after_hours' => 12, // Reset OTP attempts after 12 hours (faster than login)
         ],
 
         'pin' => [
@@ -115,6 +116,7 @@ return [
             'redirect_route' => null,
             'max_attempts' => null,
             'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
+            'reset_after_hours' => 24, // Reset PIN attempts after 24 hours
         ],
 
         'admin' => [
@@ -125,6 +127,7 @@ return [
             'redirect_route' => 'admin.login',
             'max_attempts' => null,
             'min_attempts' => 2, // Lock after 2 failed attempts (stricter for admin)
+            'reset_after_hours' => 48, // Keep admin attempts longer (stricter)
         ],
     ],
 

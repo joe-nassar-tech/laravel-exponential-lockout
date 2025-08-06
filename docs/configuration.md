@@ -31,14 +31,15 @@ Each context can have different rules and timing.
 ```
 
 **What this means:**
-- 1st failure: 60 seconds (1 minute)
-- 2nd failure: 300 seconds (5 minutes)
-- 3rd failure: 900 seconds (15 minutes)
-- 4th failure: 1800 seconds (30 minutes)
-- 5th failure: 7200 seconds (2 hours)
-- 6th failure: 21600 seconds (6 hours)
-- 7th failure: 43200 seconds (12 hours)
-- 8th+ failure: 86400 seconds (24 hours)
+- 1st-3rd failures: No lockout (free attempts)
+- 4th failure: 60 seconds (1 minute)
+- 5th failure: 300 seconds (5 minutes)
+- 6th failure: 900 seconds (15 minutes)
+- 7th failure: 1800 seconds (30 minutes)
+- 8th failure: 7200 seconds (2 hours)
+- 9th failure: 21600 seconds (6 hours)
+- 10th failure: 43200 seconds (12 hours)
+- 11th+ failure: 86400 seconds (24 hours)
 
 ### Make Wait Times Shorter
 
@@ -200,6 +201,55 @@ The `'key'` setting tells the system which field to use for tracking users:
 ```
 
 **What this does:** Tracks failures by the logged-in user's ID.
+
+## ⚙️ Advanced Settings
+
+### Free Attempts Before Lockout (`min_attempts`)
+
+```php
+'contexts' => [
+    'login' => [
+        'min_attempts' => 3,  // Allow 3 free attempts before first lockout
+    ],
+    'admin' => [
+        'min_attempts' => 2,  // Stricter for admin (only 2 free attempts)
+    ],
+    'otp' => [
+        'min_attempts' => 5,  // More lenient for OTP (5 free attempts)
+    ],
+],
+```
+
+**What this does:**
+- `min_attempts: 3` → User gets 3 free failed attempts, lockout starts on 4th failure
+- `min_attempts: 1` → Lockout starts immediately on 2nd failure
+- Higher numbers = more lenient, lower numbers = stricter
+
+### Automatic Reset After Inactivity (`reset_after_hours`)
+
+```php
+'contexts' => [
+    'login' => [
+        'reset_after_hours' => 24,  // Reset attempt count after 24 hours of inactivity
+    ],
+    'otp' => [
+        'reset_after_hours' => 12,  // Reset OTP attempts faster (12 hours)
+    ],
+    'admin' => [
+        'reset_after_hours' => 48,  // Keep admin attempts longer (48 hours)
+    ],
+    'strict_context' => [
+        'reset_after_hours' => null,  // Never reset automatically
+    ],
+],
+```
+
+**What this does:**
+- If user doesn't try for X hours, completely reset their attempt count
+- `24` = After 24 hours of no attempts, user gets fresh start
+- `null` = Never automatically reset (only manual reset or successful login)
+
+**Example:** User fails 5 times, gets locked for 5 minutes. Then doesn't try again for 25 hours. When they come back, their attempt count is reset to 0 (fresh start).
 
 ## 🎨 Response Customization
 
