@@ -35,9 +35,9 @@ class ExponentialLockout
         $this->config = $config;
     }
 
-    /**
+        /**
      * Handle an incoming request
-     * 
+     *
      * @param Request $request
      * @param Closure $next
      * @param string $context The lockout context (e.g., 'login', 'otp')
@@ -47,19 +47,74 @@ class ExponentialLockout
     {
         // Extract the key for this request and context
         $key = $this->lockoutManager->extractKeyFromRequest($context, $request);
-        
+
         // Check if the user is locked out
         if ($this->lockoutManager->isLockedOut($context, $key)) {
             return $this->buildLockoutResponse($request, $context, $key);
         }
 
         // Continue with the request
-        return $next($request);
+        $response = $next($request);
+
+        // After request is processed, check response and handle accordingly
+        $this->handlePostRequestProcessing($context, $key, $response);
+
+        return $response;
+    }
+
+        /**
+     * Handle post-request processing to record failures or clear lockouts
+     *
+     * @param string $context
+     * @param string $key
+     * @param SymfonyResponse $response
+     * @return void
+     */
+    protected function handlePostRequestProcessing(string $context, string $key, SymfonyResponse $response): void
+    {
+        $statusCode = $response->getStatusCode();
+
+        // Record failure for any error status codes (4xx and 5xx)
+        if ($this->isFailureResponse($statusCode)) {
+            $this->lockoutManager->recordFailure($context, $key);
+        }
+        // Clear lockout for successful responses (2xx)
+        elseif ($this->isSuccessResponse($statusCode)) {
+            $this->lockoutManager->clear($context, $key);
+        }
+        // For informational (1xx) and redirection (3xx) responses, do nothing
+    }
+
+    /**
+     * Check if the response indicates a failure that should be recorded
+     *
+     * @param int $statusCode
+     * @return bool
+     */
+    protected function isFailureResponse(int $statusCode): bool
+    {
+        // Record failures for:
+        // 4xx Client Errors (400-499): Bad Request, Unauthorized, Forbidden, Not Found, etc.
+        // 5xx Server Errors (500-599): Internal Server Error, Bad Gateway, etc.
+        return $statusCode >= 400 && $statusCode <= 599;
+    }
+
+    /**
+     * Check if the response indicates success that should clear lockouts
+     *
+     * @param int $statusCode
+     * @return bool
+     */
+    protected function isSuccessResponse(int $statusCode): bool
+    {
+        // Clear lockouts for:
+        // 2xx Success (200-299): OK, Created, Accepted, etc.
+        return $statusCode >= 200 && $statusCode <= 299;
     }
 
     /**
      * Build the lockout response
-     * 
+     *
      * @param Request $request
      * @param string $context
      * @param string $key
