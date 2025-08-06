@@ -4,22 +4,42 @@ This guide shows you simple examples of how to use Laravel Exponential Lockout i
 
 ## 📚 What You'll Learn
 
-- How to protect different pages
+- How to protect different pages (fully automatic)
+- What request fields are required
 - How to check if someone is blocked
 - How to unblock users
 - How to get information about blocks
+
+## ✨ **NEW: Automatic Operation**
+
+**Great news!** The lockout system is now **100% automatic**:
+- ✅ **No manual code needed** in your controllers
+- ✅ **Automatically detects failures** from HTTP status codes
+- ✅ **Automatically clears lockouts** when login succeeds
+- ✅ **Works with ANY error response** your app returns
 
 ## 🛡️ Protecting Different Pages
 
 ### Protect Login Page
 
 ```php
-// In routes/web.php
+// In routes/web.php or routes/api.php
 Route::post('/login', [LoginController::class, 'login'])
     ->middleware('exponential.lockout:login');
 ```
 
-**What this does:** Blocks users who try wrong passwords too many times on login.
+**Required request field:**
+```json
+{
+  "email": "user@example.com",
+  "password": "secret123"
+}
+```
+
+**What this does:** 
+- Automatically blocks users who get 401/422 errors (wrong passwords)
+- Automatically unblocks when user gets 200 success response
+- Tracks by email address
 
 ### Protect Password Reset
 
@@ -28,7 +48,16 @@ Route::post('/password/reset', [PasswordController::class, 'reset'])
     ->middleware('exponential.lockout:password_reset');
 ```
 
-**What this does:** Stops people from spamming password reset requests.
+**Required request field:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**What this does:** 
+- Stops people from spamming password reset requests
+- Tracks by email address
 
 ### Protect Phone Verification (OTP)
 
@@ -37,7 +66,17 @@ Route::post('/verify-phone', [PhoneController::class, 'verify'])
     ->middleware('exponential.lockout:otp');
 ```
 
-**What this does:** Prevents people from guessing phone verification codes.
+**Required request field:**
+```json
+{
+  "phone": "+1234567890",
+  "code": "123456"
+}
+```
+
+**What this does:** 
+- Prevents people from guessing phone verification codes
+- Tracks by phone number
 
 ## 🎮 Manual Control in Your Code
 

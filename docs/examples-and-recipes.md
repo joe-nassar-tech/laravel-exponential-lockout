@@ -2,6 +2,14 @@
 
 This guide provides real-world examples and ready-to-use solutions for common scenarios. Copy and paste these examples to get started quickly!
 
+## ✨ **New: 100% Automatic Operation**
+
+All examples now work **automatically** with no manual coding required:
+- ✅ **Auto-detects failures** from HTTP status codes (4xx/5xx)
+- ✅ **Auto-clears lockouts** on success responses (2xx)  
+- ✅ **No controller changes needed** - just add middleware
+- ✅ **Works with ANY framework response** format
+
 ## 🎯 Complete Application Examples
 
 ### 1. E-commerce Website

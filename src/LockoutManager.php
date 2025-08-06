@@ -187,37 +187,93 @@ class LockoutManager
     /**
      * Extract key from request based on context configuration
      * 
-     * @param string $context The lockout context
+     * This method extracts the unique identifier for lockout tracking from the HTTP request.
+     * The extraction method is defined in the context configuration.
+     * 
+     * Supported key extractors:
+     * - 'email': Extracts from request input field 'email'
+     * - 'phone': Extracts from request input field 'phone' 
+     * - 'username': Extracts from request input field 'username'
+     * - 'ip': Uses client IP address
+     * - Custom callable: Uses a custom function for extraction
+     * 
+     * @param string $context The lockout context (e.g., 'login', 'otp')
      * @param Request $request The HTTP request
-     * @return string The extracted key
+     * @return string The extracted key for lockout tracking
+     * @throws InvalidArgumentException If key cannot be extracted and no fallback available
      */
     public function extractKeyFromRequest(string $context, Request $request): string
     {
         $contextConfig = $this->getContextConfig($context);
-        $keyExtractor = $contextConfig['key'];
+        $keyExtractor = $contextConfig['key'] ?? 'ip';
 
-        // If it's a string, look for a predefined extractor
+        // If it's a string, look for a predefined extractor first
         if (is_string($keyExtractor)) {
             $extractors = $this->config['key_extractors'] ?? [];
             
-            if (isset($extractors[$keyExtractor])) {
-                $extractor = $extractors[$keyExtractor];
-                if (is_callable($extractor)) {
-                    return $extractor($request);
+            // Check for custom extractor
+            if (isset($extractors[$keyExtractor]) && is_callable($extractors[$keyExtractor])) {
+                $extractedKey = $extractors[$keyExtractor]($request);
+                if ($extractedKey) {
+                    return $extractedKey;
                 }
             }
             
-            // Fallback to simple input extraction
-            return $request->input($keyExtractor) ?: $request->ip();
+            // Handle built-in extractors
+            $extractedKey = $this->extractBuiltInKey($keyExtractor, $request);
+            if ($extractedKey) {
+                return $extractedKey;
+            }
+
+            // Log warning if key field is missing from request
+            if ($keyExtractor !== 'ip' && !$request->has($keyExtractor)) {
+                error_log("Warning: Exponential Lockout - Required field '{$keyExtractor}' missing from request for context '{$context}'. Falling back to IP address.");
+            }
         }
 
         // If it's a callable, use it directly
         if (is_callable($keyExtractor)) {
-            return $keyExtractor($request);
+            $extractedKey = $keyExtractor($request);
+            if ($extractedKey) {
+                return $extractedKey;
+            }
         }
 
         // Final fallback to IP address
-        return $request->ip();
+        $ipAddress = $request->ip();
+        if (!$ipAddress) {
+            throw new InvalidArgumentException("Unable to extract lockout key for context '{$context}' - no fallback IP available.");
+        }
+
+        return $ipAddress;
+    }
+
+    /**
+     * Extract key using built-in extractors
+     * 
+     * @param string $extractor The extractor name
+     * @param Request $request The HTTP request
+     * @return string|null The extracted key or null if not found
+     */
+    protected function extractBuiltInKey(string $extractor, Request $request): ?string
+    {
+        switch ($extractor) {
+            case 'email':
+                return $request->input('email') ?: $request->input('username');
+            
+            case 'phone':
+                return $request->input('phone') ?: $request->input('mobile') ?: $request->input('telephone');
+            
+            case 'username':
+                return $request->input('username') ?: $request->input('email');
+            
+            case 'ip':
+                return $request->ip();
+            
+            default:
+                // For any other string, try to extract from request input
+                return $request->input($extractor);
+        }
     }
 
     /**

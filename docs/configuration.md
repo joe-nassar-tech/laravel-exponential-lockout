@@ -72,10 +72,45 @@ Each context can have different rules and timing.
 'contexts' => [
     'login' => [
         'enabled' => true,
-        'key' => 'email',
-        'delays' => null, // Uses default_delays
+        'key' => 'email',          // Looks for 'email' field in request
+        'delays' => null,          // Uses default_delays
     ],
 ],
+```
+
+## 🔑 **Key Extractors (Input Field Requirements)**
+
+The `'key'` setting tells the system which field to use for tracking users:
+
+### Built-in Key Extractors
+
+| Key Value | Primary Field | Fallback Fields | Use Case |
+|-----------|---------------|-----------------|----------|
+| `'email'` | `email` | `username` | Login, registration, password reset |
+| `'phone'` | `phone` | `mobile`, `telephone` | OTP verification, SMS codes |
+| `'username'` | `username` | `email` | Username-based login |
+| `'ip'` | Client IP | None | Rate limiting by IP |
+
+### Example Request Requirements
+
+```php
+// For 'key' => 'email'
+{
+  "email": "user@example.com",     // Required
+  "password": "secret123"
+}
+
+// For 'key' => 'phone'  
+{
+  "phone": "+1234567890",          // Required
+  "code": "123456"
+}
+
+// For 'key' => 'username'
+{
+  "username": "johndoe",           // Required  
+  "password": "secret123"
+}
 ```
 
 ### Context with Custom Wait Times
@@ -84,7 +119,7 @@ Each context can have different rules and timing.
 'contexts' => [
     'otp' => [
         'enabled' => true,
-        'key' => 'phone',
+        'key' => 'phone',         // Requires 'phone' field in request
         'delays' => [30, 60, 180, 300, 600], // Custom timing for OTP
     ],
 ],
