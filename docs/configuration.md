@@ -431,22 +431,74 @@ The `'key'` setting tells the system which field to use for tracking users:
 
 ### Custom Response Callback
 
-```php
-'custom_response_callback' => function ($context, $key, $remainingTime) {
-    return response()->json([
-        'success' => false,
-        'message' => 'Too many attempts for ' . $context,
-        'wait_time_minutes' => ceil($remainingTime / 60),
-        'try_again_at' => now()->addSeconds($remainingTime)->toISOString(),
-    ], 429);
-},
+The `'callback'` response mode gives you complete control over lockout responses:
 
+```php
 'contexts' => [
-    'api_special' => [
+    'login' => [
         'response_mode' => 'callback',
+        'response_callback' => 'App\Http\Controllers\LoginController@handleLockout',
+    ],
+    // OR use a closure directly
+    'api' => [
+        'response_mode' => 'callback',
+        'response_callback' => function($request, $lockoutInfo) {
+            return response()->json([
+                'error' => 'API_RATE_LIMITED',
+                'retry_after' => $lockoutInfo['remaining_time'],
+                'attempts_made' => $lockoutInfo['attempts'],
+                'help_url' => 'https://api.example.com/docs/rate-limits'
+            ], 429);
+        },
     ],
 ],
 ```
+
+#### Creating a Callback Method
+
+```php
+// app/Http/Controllers/LoginController.php
+public function handleLockout($request, $lockoutInfo)
+{
+    // $lockoutInfo contains:
+    // - 'key' => 'user@example.com'
+    // - 'context' => 'login'  
+    // - 'attempts' => 4
+    // - 'is_locked_out' => true
+    // - 'remaining_time' => 300 (seconds)
+    // - 'locked_until' => Carbon instance
+    
+    $timeLeft = $lockoutInfo['remaining_time'];
+    $attempts = $lockoutInfo['attempts'];
+    
+    // Log security event
+    Log::warning('User locked out', [
+        'email' => $lockoutInfo['key'],
+        'attempts' => $attempts,
+        'ip' => $request->ip(),
+    ]);
+    
+    // Custom response logic
+    if ($request->expectsJson()) {
+        return response()->json([
+            'message' => 'Account temporarily locked for security',
+            'retry_after' => $timeLeft,
+            'attempts_made' => $attempts,
+        ], 429);
+    }
+    
+    return redirect()->route('login')
+        ->withErrors(['email' => "Too many attempts. Wait " . ceil($timeLeft/60) . " minutes."]);
+}
+```
+
+#### Use Cases for Callbacks
+
+- **VIP User Handling** - Different rules for premium users
+- **Security Logging** - Custom logging and alerting  
+- **Email Notifications** - Alert users about lockouts
+- **Custom UI** - Show help modals, progress indicators
+- **External Integration** - Send data to security systems
 
 ## 🛡️ Security Levels
 

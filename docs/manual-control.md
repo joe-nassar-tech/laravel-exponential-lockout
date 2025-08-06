@@ -510,6 +510,69 @@ Lockout::recordFailure('login', $email); // Email for login
 Lockout::recordFailure('otp', $phone);   // Phone for OTP
 ```
 
+## 🎛️ Advanced: Custom Response Callbacks
+
+For ultimate control, use callback responses to create custom lockout handling:
+
+### Basic Callback Setup
+
+```php
+// config/exponential-lockout.php
+'contexts' => [
+    'login' => [
+        'response_mode' => 'callback',
+        'response_callback' => 'App\Http\Controllers\SecurityController@handleLockout',
+    ],
+],
+```
+
+### Advanced Callback Examples
+
+```php
+// app/Http/Controllers/SecurityController.php
+public function handleLockout($request, $lockoutInfo)
+{
+    // Different handling based on attempt count
+    $attempts = $lockoutInfo['attempts'];
+    
+    if ($attempts >= 10) {
+        // Alert security team for suspicious activity
+        Mail::to('security@company.com')->send(
+            new SuspiciousActivityAlert($lockoutInfo)
+        );
+    }
+    
+    // VIP user special handling
+    if ($this->isVipUser($lockoutInfo['key'])) {
+        return response()->json([
+            'message' => 'VIP account protection activated',
+            'contact_support' => true,
+            'retry_after' => $lockoutInfo['remaining_time']
+        ], 429);
+    }
+    
+    // Regular response
+    return response()->json([
+        'error' => 'Account locked for security',
+        'retry_after' => $lockoutInfo['remaining_time'],
+        'attempts_made' => $attempts,
+    ], 429);
+}
+```
+
+### Available Callback Data
+
+```php
+$lockoutInfo = [
+    'key' => 'user@example.com',           // User identifier
+    'context' => 'login',                  // Context name
+    'attempts' => 4,                       // Failed attempts count
+    'is_locked_out' => true,               // Current lock status
+    'remaining_time' => 300,               // Seconds until unlock
+    'locked_until' => Carbon::instance,    // Unlock timestamp
+];
+```
+
 ## 🎉 Success Tips
 
 1. **Test everything** - Try wrong passwords to see blocking in action
@@ -517,6 +580,7 @@ Lockout::recordFailure('otp', $phone);   // Phone for OTP
 3. **Give clear messages** - Tell users exactly how long to wait
 4. **Use consistent identifiers** - Don't mix email and phone for same context
 5. **Clear blocks on success** - Always unblock when authentication succeeds
+6. **Use callbacks wisely** - Great for logging, notifications, and custom logic
 
 ## 🚀 Next Steps
 
