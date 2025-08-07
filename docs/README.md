@@ -17,6 +17,7 @@ Welcome to the complete documentation for Laravel Exponential Lockout! This docu
 ### Reference & Help
 - **[Examples and Recipes](examples-and-recipes.md)** - Real-world examples and solutions
 - **[Troubleshooting](troubleshooting.md)** - Common problems and solutions
+- **[Response Modes Guide](response-modes-guide.md)** - Complete examples for all response modes
 - **[Features Roadmap](features-roadmap.md)** - Future features and development plans
 
 ### For Developers
