@@ -48,13 +48,17 @@ class LockoutManager
         $cacheKey = $this->buildCacheKey($context, $key);
         $store = $this->getCacheStore();
         
-        // Get current lockout data
-        $lockoutData = $store->get($cacheKey, [
-            'attempts' => 0,
-            'locked_until' => null,
-            'last_attempt' => null,
-            'grace_attempt_used' => false,
-        ]);
+        // Get current lockout data - handle null case properly
+        $lockoutData = $store->get($cacheKey);
+        if ($lockoutData === null) {
+            // Cache expired or doesn't exist - start fresh
+            $lockoutData = [
+                'attempts' => 0,
+                'locked_until' => null,
+                'last_attempt' => null,
+                'grace_attempt_used' => false,
+            ];
+        }
 
         // Check if we should reset attempts due to time passed (optional feature)
         $contextConfig = $this->getContextConfig($context);
@@ -105,7 +109,19 @@ class LockoutManager
         }
 
         // Store the updated data with appropriate TTL
-        $ttl = isset($lockoutDuration) ? $lockoutDuration + 3600 : 3600; // Add 1 hour buffer
+        // Calculate TTL based on reset_after_hours configuration
+        $contextConfig = $this->getContextConfig($context);
+        $resetAfterHours = $contextConfig['reset_after_hours'] ?? 24;
+        
+        if ($resetAfterHours === null) {
+            // If reset_after_hours is null, set very long TTL (20 years)
+            $ttl = 630720000; // 20 years in seconds
+        } else {
+            // Calculate TTL: lockout duration + reset_after_hours
+            $resetAfterSeconds = $resetAfterHours * 3600; // Convert hours to seconds
+            $ttl = isset($lockoutDuration) ? $lockoutDuration + $resetAfterSeconds : $resetAfterSeconds;
+        }
+        
         $store->put($cacheKey, $lockoutData, $ttl);
 
         return $lockoutData['attempts'];
@@ -125,7 +141,13 @@ class LockoutManager
         $cacheKey = $this->buildCacheKey($context, $key);
         $lockoutData = $this->getCacheStore()->get($cacheKey);
 
-        if (!$lockoutData || !isset($lockoutData['locked_until']) || $lockoutData['locked_until'] === null) {
+        // If no data exists, user is not locked out
+        if (!$lockoutData) {
+            return false;
+        }
+
+        // If no lockout timestamp, user is not locked out
+        if (!isset($lockoutData['locked_until']) || $lockoutData['locked_until'] === null) {
             return false;
         }
 
@@ -137,7 +159,21 @@ class LockoutManager
             $lockoutData['locked_until'] = null;
             // Reset grace attempt when lockout expires - user gets 1 free attempt
             $lockoutData['grace_attempt_used'] = false;
-            $this->getCacheStore()->put($cacheKey, $lockoutData, 3600); // Keep attempt history for 1 hour
+            
+            // Calculate TTL based on reset_after_hours configuration
+            $contextConfig = $this->getContextConfig($context);
+            $resetAfterHours = $contextConfig['reset_after_hours'] ?? 24;
+            
+            if ($resetAfterHours === null) {
+                // If reset_after_hours is null, set very long TTL (20 years)
+                $ttl = 630720000; // 20 years in seconds
+            } else {
+                // Use reset_after_hours for TTL
+                $ttl = $resetAfterHours * 3600; // Convert hours to seconds
+            }
+            
+            // Store updated data with proper TTL
+            $this->getCacheStore()->put($cacheKey, $lockoutData, $ttl);
             return false;
         }
 
@@ -193,7 +229,17 @@ class LockoutManager
         $this->validateContext($context);
         
         $cacheKey = $this->buildCacheKey($context, $key);
-        return $this->getCacheStore()->forget($cacheKey);
+        $store = $this->getCacheStore();
+        
+        // Completely remove the cache entry
+        $result = $store->forget($cacheKey);
+        
+        // Also try to delete if forget doesn't work (some cache drivers)
+        if (!$result) {
+            $result = $store->delete($cacheKey);
+        }
+        
+        return $result;
     }
 
     /**
@@ -234,6 +280,11 @@ class LockoutManager
         
         $cacheKey = $this->buildCacheKey($context, $key);
         $lockoutData = $this->getCacheStore()->get($cacheKey);
+        
+        // If cache is null (expired), return 0 attempts
+        if ($lockoutData === null) {
+            return 0;
+        }
         
         return $lockoutData['attempts'] ?? 0;
     }
@@ -331,7 +382,7 @@ class LockoutManager
     }
 
     /**
-     * Get the lockout information for a context and key
+     * Get detailed lockout information for the given context and key
      * 
      * @param string $context The lockout context
      * @param string $key The unique identifier
@@ -342,21 +393,26 @@ class LockoutManager
         $this->validateContext($context);
         
         $cacheKey = $this->buildCacheKey($context, $key);
-        $lockoutData = $this->getCacheStore()->get($cacheKey, [
-            'attempts' => 0,
-            'locked_until' => null,
-            'last_attempt' => null,
-        ]);
+        $lockoutData = $this->getCacheStore()->get($cacheKey);
+        
+        // If cache is null (expired), return default values
+        if ($lockoutData === null) {
+            $lockoutData = [
+                'attempts' => 0,
+                'locked_until' => null,
+                'last_attempt' => null,
+            ];
+        }
 
         return [
             'context' => $context,
             'key' => $key,
-            'attempts' => $lockoutData['attempts'],
+            'attempts' => $lockoutData['attempts'] ?? 0,
             'is_locked_out' => $this->isLockedOut($context, $key),
             'remaining_time' => $this->getRemainingTime($context, $key),
-            'locked_until' => $lockoutData['locked_until'] ? 
+            'locked_until' => isset($lockoutData['locked_until']) && $lockoutData['locked_until'] ? 
                 Carbon::createFromTimestamp($lockoutData['locked_until']) : null,
-            'last_attempt' => $lockoutData['last_attempt'] ? 
+            'last_attempt' => isset($lockoutData['last_attempt']) && $lockoutData['last_attempt'] ? 
                 Carbon::createFromTimestamp($lockoutData['last_attempt']) : null,
         ];
     }

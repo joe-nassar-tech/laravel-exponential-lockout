@@ -1,7 +1,7 @@
 {
     "name": "joe-nassar-tech/laravel-exponential-lockout",
     "description": "Laravel package for implementing exponential lockout on failed authentication attempts with configurable contexts",
-    "version": "1.4.5",
+    "version": "1.4.6",
     "type": "library",
     "license": "MIT",
     "keywords": [

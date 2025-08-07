@@ -5,6 +5,30 @@ All notable changes to `laravel-exponential-lockout` will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.6] - 2024-01-XX
+
+### Fixed
+- **TTL Calculation Based on reset_after_hours**
+  - Fixed cache TTL calculation to use `reset_after_hours` from context configuration
+  - Cache now expires after: `lockout_duration + reset_after_hours`
+  - When `reset_after_hours` is `null`, cache expires after 20 years (practically never)
+  - Improved consistency between `recordFailure()` and `isLockedOut()` TTL calculations
+  - Removed hardcoded 2-hour buffer in favor of configurable reset timing
+- **Cache Expiration Logic Fix**
+  - Fixed issue where cache entries returning `null` after expiration were not handled properly
+  - Improved cache handling in `recordFailure()`, `isLockedOut()`, `getAttemptCount()`, and `getLockoutInfo()` methods
+  - Enhanced `clear()` method to use both `forget()` and `delete()` for better cache driver compatibility
+  - Added proper null checks for expired cache entries throughout the codebase
+
+### Technical Details
+- Updated TTL calculation in `recordFailure()` method to use context-specific `reset_after_hours`
+- Updated TTL calculation in `isLockedOut()` method for consistency
+- Added support for `null` reset_after_hours with 20-year TTL (630,720,000 seconds)
+- Cache expiration now properly reflects the configured reset behavior
+- Updated cache retrieval logic to handle `null` values from expired cache entries
+- Enhanced cache clearing mechanism for better compatibility across different cache drivers
+- Added defensive programming practices for cache expiration scenarios
+
 ## [1.4.5] - 2024-01-XX
 
 ### Added
