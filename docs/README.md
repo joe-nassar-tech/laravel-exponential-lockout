@@ -17,6 +17,7 @@ Welcome to the complete documentation for Laravel Exponential Lockout! This docu
 ### Reference & Help
 - **[Examples and Recipes](examples-and-recipes.md)** - Real-world examples and solutions
 - **[Troubleshooting](troubleshooting.md)** - Common problems and solutions
+- **[Features Roadmap](features-roadmap.md)** - Future features and development plans
 
 ### For Developers
 - **[Learning Roadmap](learning-roadmap.md)** - How to learn Laravel and understand this package
