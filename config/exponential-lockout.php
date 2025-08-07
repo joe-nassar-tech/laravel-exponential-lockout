@@ -64,6 +64,64 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Context Templates & Inheritance
+    |--------------------------------------------------------------------------
+    |
+    | Define reusable context templates that can be inherited by other contexts.
+    | This allows you to create consistent security policies across multiple contexts.
+    |
+    | Template Inheritance:
+    | - Use 'extends' => 'template_name' to inherit from a template
+    | - Override specific settings while keeping others from the template
+    | - Templates can extend other templates (nested inheritance)
+    |
+    | Examples:
+    | 'extends' => 'strict' - Inherit strict security template
+    | 'extends' => 'lenient' - Inherit lenient security template
+    | 'extends' => 'api' - Inherit API-specific template
+    |
+    */
+    'context_templates' => [
+        'strict' => [
+            'enabled' => true,
+            'min_attempts' => 1, // Lock immediately after 1st failure
+            'delays' => [300, 900, 1800, 7200, 21600], // 5min → 15min → 30min → 2hr → 6hr
+            'reset_after_hours' => 48, // Keep attempts longer
+        ],
+        
+        'lenient' => [
+            'enabled' => true,
+            'min_attempts' => 5, // Allow 4 free attempts
+            'delays' => [30, 60, 180, 300, 600], // 30sec → 1min → 3min → 5min → 10min
+            'reset_after_hours' => 12, // Reset faster
+        ],
+        
+        'api' => [
+            'enabled' => true,
+            'response_mode' => 'json',
+            'min_attempts' => 3,
+            'delays' => [60, 300, 900, 1800, 7200],
+            'reset_after_hours' => 24,
+        ],
+        
+        'web' => [
+            'enabled' => true,
+            'response_mode' => 'redirect',
+            'min_attempts' => 3,
+            'delays' => [60, 300, 900, 1800, 7200],
+            'reset_after_hours' => 24,
+        ],
+        
+        'mfa' => [
+            'enabled' => true,
+            'min_attempts' => 2, // Stricter for MFA
+            'delays' => [30, 60, 120, 300, 600], // Quick cycles for time-sensitive MFA
+            'reset_after_hours' => 12, // Reset faster for MFA
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Context-Specific Configurations
     |--------------------------------------------------------------------------
     |
@@ -78,56 +136,72 @@ return [
     | - max_attempts: Maximum attempts allowed (null = unlimited)
     | - response_mode: 'auto', 'json', 'redirect', or 'callback'
     | - redirect_route: Route to redirect to when locked out
+    | - extends: Inherit settings from a template (see context_templates above)
     |
     | Examples:
     | min_attempts => 1: Lock immediately after 1st failure
     | min_attempts => 3: Allow 2 free attempts, lock on 3rd failure
     | min_attempts => 5: Allow 4 free attempts, lock on 5th failure
     |
+    | Inheritance Examples:
+    | 'extends' => 'strict' - Inherit strict security template
+    | 'extends' => 'api' - Inherit API template and override specific settings
+    |
     */
     'contexts' => [
         'login' => [
-            'enabled' => true,
-            'key' => 'email', // or 'ip', 'phone', custom callback
-            'delays' => null, // null uses default_delays
-            'response_mode' => null, // null uses default_response_mode
-            'redirect_route' => null, // null uses default_redirect_route
-            'max_attempts' => null, // null means unlimited (uses delay sequence length)
-            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
-            'reset_after_hours' => 24, // Reset attempt count after 24 hours of inactivity
+            'extends' => 'web', // Inherit web template
+            'key' => 'email',
+            'redirect_route' => 'login',
         ],
 
         'otp' => [
-            'enabled' => true,
+            'extends' => 'mfa', // Inherit MFA template
             'key' => 'phone',
-            'delays' => [30, 60, 180, 300, 600], // Shorter delays for OTP
             'response_mode' => 'json',
-            'redirect_route' => null,
-            'max_attempts' => null,
-            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
-            'reset_after_hours' => 12, // Reset OTP attempts after 12 hours (faster than login)
         ],
 
         'pin' => [
-            'enabled' => true,
+            'extends' => 'web', // Inherit web template
             'key' => 'user_id',
-            'delays' => [60, 300, 900, 1800], // Moderate delays for PIN
-            'response_mode' => null,
-            'redirect_route' => null,
-            'max_attempts' => null,
-            'min_attempts' => 3, // Lock after 3 failed attempts (allow 2 free attempts)
-            'reset_after_hours' => 24, // Reset PIN attempts after 24 hours
+            'delays' => [60, 300, 900, 1800], // Override with moderate delays
         ],
 
         'admin' => [
-            'enabled' => true,
+            'extends' => 'strict', // Inherit strict template
             'key' => 'email',
-            'delays' => [300, 900, 1800, 7200, 21600], // Longer delays for admin
-            'response_mode' => null,
             'redirect_route' => 'admin.login',
-            'max_attempts' => null,
-            'min_attempts' => 2, // Lock after 2 failed attempts (stricter for admin)
-            'reset_after_hours' => 48, // Keep admin attempts longer (stricter)
+        ],
+
+        // API contexts using inheritance
+        'api_login' => [
+            'extends' => 'api', // Inherit API template
+            'key' => 'email',
+        ],
+
+        'api_otp' => [
+            'extends' => 'mfa', // Inherit MFA template
+            'key' => 'phone',
+            'response_mode' => 'json', // Override to JSON for API
+        ],
+
+        // Additional contexts using inheritance
+        'password_reset' => [
+            'extends' => 'web',
+            'key' => 'email',
+            'redirect_route' => 'password.request',
+        ],
+
+        'email_verification' => [
+            'extends' => 'mfa',
+            'key' => 'email',
+            'response_mode' => 'json',
+        ],
+
+        'two_factor' => [
+            'extends' => 'mfa',
+            'key' => 'user_id',
+            'response_mode' => 'json',
         ],
     ],
 

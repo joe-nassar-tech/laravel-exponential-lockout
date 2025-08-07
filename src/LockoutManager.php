@@ -389,12 +389,31 @@ class LockoutManager
     }
 
     /**
-     * Get configuration for the given context
+     * Get configuration for the given context with inheritance support
      */
     protected function getContextConfig(string $context): array
     {
         $contexts = $this->config['contexts'] ?? [];
-        return $contexts[$context] ?? [];
+        $contextConfig = $contexts[$context] ?? [];
+        
+        // If context has inheritance, merge with template
+        if (isset($contextConfig['extends'])) {
+            $templateName = $contextConfig['extends'];
+            $templates = $this->config['context_templates'] ?? [];
+            $template = $templates[$templateName] ?? [];
+            
+            if (empty($template)) {
+                throw new InvalidArgumentException("Template '{$templateName}' not found for context '{$context}'.");
+            }
+            
+            // Merge template with context config (context overrides template)
+            $contextConfig = array_merge($template, $contextConfig);
+            
+            // Remove the 'extends' key from final config
+            unset($contextConfig['extends']);
+        }
+        
+        return $contextConfig;
     }
 
     /**

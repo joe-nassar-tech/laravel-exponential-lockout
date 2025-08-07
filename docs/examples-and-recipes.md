@@ -20,36 +20,56 @@ All examples now work **automatically** with no manual coding required:
 
 ```php
 // config/exponential-lockout.php
+'context_templates' => [
+    'balanced' => [
+        'enabled' => true,
+        'min_attempts' => 3,
+        'delays' => [60, 300, 900, 1800, 7200], // 1min → 5min → 15min → 30min → 2hr
+        'reset_after_hours' => 24,
+    ],
+    
+    'strict' => [
+        'enabled' => true,
+        'min_attempts' => 2,
+        'delays' => [300, 900, 1800, 7200, 21600], // 5min → 15min → 30min → 2hr → 6hr
+        'reset_after_hours' => 48,
+    ],
+    
+    'quick' => [
+        'enabled' => true,
+        'min_attempts' => 3,
+        'delays' => [60, 180, 300, 600], // 1min → 3min → 5min → 10min
+        'reset_after_hours' => 12,
+    ],
+],
+
 'contexts' => [
     // Customer login - balanced protection
     'customer_login' => [
-        'enabled' => true,
+        'extends' => 'balanced', // Inherit balanced template
         'key' => 'email',
-        'delays' => [60, 300, 900, 1800, 7200], // 1min → 5min → 15min → 30min → 2hr
         'response_mode' => 'auto',
     ],
     
     // Admin login - stronger protection
     'admin_login' => [
-        'enabled' => true,
+        'extends' => 'strict', // Inherit strict template
         'key' => 'email',
-        'delays' => [300, 900, 1800, 7200, 21600], // 5min → 15min → 30min → 2hr → 6hr
         'response_mode' => 'auto',
         'redirect_route' => 'admin.login',
     ],
     
     // Password reset - prevent spam
     'password_reset' => [
-        'enabled' => true,
+        'extends' => 'balanced', // Inherit balanced template
         'key' => 'email',
-        'delays' => [300, 600, 1800, 3600], // 5min → 10min → 30min → 1hr
+        'delays' => [300, 600, 1800, 3600], // Override with custom delays
     ],
     
     // Order verification (for high-value orders)
     'order_verify' => [
-        'enabled' => true,
+        'extends' => 'quick', // Inherit quick template
         'key' => 'user_id',
-        'delays' => [60, 180, 300, 600], // 1min → 3min → 5min → 10min
     ],
 ],
 ```

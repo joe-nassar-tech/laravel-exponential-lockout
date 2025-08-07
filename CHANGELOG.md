@@ -5,6 +5,29 @@ All notable changes to `laravel-exponential-lockout` will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2024-01-XX
+
+### Added
+- **Context Template Inheritance System**
+  - Reusable security templates for consistent policies
+  - Template inheritance with `extends` option
+  - Pre-built templates: `strict`, `lenient`, `api`, `web`, `mfa`
+  - Context-specific overrides while maintaining template defaults
+  - Improved configuration organization and maintainability
+
+### Changed
+- Updated default context configurations to use template inheritance
+- Enhanced configuration documentation with template examples
+- Improved code organization and readability
+
+### Technical Details
+- Added `context_templates` configuration section
+- Enhanced `getContextConfig()` method with inheritance support
+- Template merging with context-specific overrides
+- Backward compatibility maintained for direct context configuration
+
+---
+
 ## [Unreleased]
 
 ### Added

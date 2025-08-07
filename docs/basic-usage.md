@@ -20,6 +20,42 @@ This guide shows you simple examples of how to use Laravel Exponential Lockout i
 
 ## 🛡️ Protecting Different Pages
 
+### Using Templates (Recommended)
+
+The package now supports **template inheritance** for consistent security policies:
+
+```php
+// In config/exponential-lockout.php
+'context_templates' => [
+    'api' => [
+        'enabled' => true,
+        'response_mode' => 'json',
+        'min_attempts' => 3,
+        'delays' => [60, 300, 900, 1800, 7200],
+        'reset_after_hours' => 24,
+    ],
+    'mfa' => [
+        'enabled' => true,
+        'min_attempts' => 2, // Stricter for MFA
+        'delays' => [30, 60, 120, 300, 600], // Quick cycles
+        'reset_after_hours' => 12, // Reset faster
+    ],
+],
+
+'contexts' => [
+    'login' => [
+        'extends' => 'api', // Inherit API template
+        'key' => 'email',
+        'redirect_route' => 'login', // Override specific setting
+    ],
+    'otp' => [
+        'extends' => 'mfa', // Inherit MFA template
+        'key' => 'phone',
+        'response_mode' => 'json',
+    ],
+],
+```
+
 ### Protect Login Page
 
 ```php
@@ -40,6 +76,7 @@ Route::post('/login', [LoginController::class, 'login'])
 - Automatically blocks users who get 401/422 errors (wrong passwords)
 - Automatically unblocks when user gets 200 success response
 - Tracks by email address
+- Uses API template settings (JSON responses, 3 attempts before lockout)
 
 ### Protect Password Reset
 
